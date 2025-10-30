@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/workflows/cd.yaml"
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to GHCR"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  helm-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2
+
+      - name: Run chart-testing (lint)
+        run: ct lint --chart-dirs . --charts .
+
+  helm-install-test:
+    runs-on: ubuntu-latest
+    needs: helm-lint
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+
+      - name: Run chart-testing (install)
+        run: ct install --chart-dirs . --charts .
+
+  publish-helm-chart:
+    runs-on: ubuntu-latest
+    needs: helm-lint
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish == true)
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.0
+
+      - name: Extract metadata
+        id: meta
+        run: |
+          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "repo_owner=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+          echo "chart_version=$(grep '^version:' Chart.yaml | awk '{print $2}')" >> $GITHUB_OUTPUT
+
+      - name: Package Helm chart
+        run: helm package .
+
+      - name: Login to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Push Helm chart to GHCR
+        run: |
+          helm push vllm-${{ steps.meta.outputs.chart_version }}.tgz oci://ghcr.io/${{ steps.meta.outputs.repo_owner }}/charts
+
+      - name: Logout from GitHub Container Registry
+        run: helm registry logout ghcr.io
