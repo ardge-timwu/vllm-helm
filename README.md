@@ -22,7 +22,7 @@ vLLM is a high-throughput and memory-efficient inference and serving engine for 
 To install the chart with the release name `my-vllm`:
 
 ```bash
-helm install my-vllm arktec-quant-charts/vllm
+helm install my-vllm ardge-timwu/vllm-helm
 ```
 
 The command deploys vLLM on the Kubernetes cluster in the default configuration. The [Parameters](#parameters) section lists the parameters that can be configured during installation.
@@ -63,13 +63,13 @@ The following table lists the configurable parameters of the vLLM chart and thei
 ### Basic Installation
 
 ```bash
-helm install vllm arktec-quant-charts/vllm
+helm install vllm ardge-timwu/vllm-helm
 ```
 
 ### Custom Model Configuration
 
 ```bash
-helm install vllm arktec-quant-charts/vllm \
+helm install vllm ardge-timwu/vllm-helm \
   --set vllm.model="microsoft/DialoGPT-large" \
   --set vllm.maxModelLen=4096
 ```
@@ -77,7 +77,7 @@ helm install vllm arktec-quant-charts/vllm \
 ### GPU Configuration
 
 ```bash
-helm install vllm arktec-quant-charts/vllm \
+helm install vllm ardge-timwu/vllm-helm \
   --set resources.limits.nvidia.com/gpu=2 \
   --set vllm.gpuMemoryUtilization=0.8
 ```
@@ -85,7 +85,7 @@ helm install vllm arktec-quant-charts/vllm \
 ### v0.11.0 Performance Optimization
 
 ```bash
-helm install vllm arktec-quant-charts/vllm \
+helm install vllm ardge-timwu/vllm-helm \
   --set vllm.cudaGraphMode=FULL_AND_PIECEWISE \
   --set vllm.asyncScheduling=false
 ```
@@ -93,7 +93,7 @@ helm install vllm arktec-quant-charts/vllm \
 ### With Ingress
 
 ```bash
-helm install vllm arktec-quant-charts/vllm \
+helm install vllm ardge-timwu/vllm-helm \
   --set ingress.enabled=true \
   --set ingress.hosts[0].host=vllm.example.com
 ```
