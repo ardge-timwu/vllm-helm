@@ -89,22 +89,22 @@ vllm:
   # Model configuration
   model: "microsoft/DialoGPT-medium"
   trustRemoteCode: false
-  
+
   # Server configuration
   host: "0.0.0.0"
   port: 8000
-  
+
   # GPU configuration
   gpuMemoryUtilization: 0.9
   maxModelLen: 2048
-  
+
   # Additional vLLM arguments
   additionalArgs: []
-  
+
   # v0.11.0 specific features
   cudaGraphMode: "FULL_AND_PIECEWISE"  # New default in v0.11.0
   asyncScheduling: false  # Disabled due to known issues in v0.11.0
-  
+
   # Environment variables
   env:
     - name: CUDA_VISIBLE_DEVICES
