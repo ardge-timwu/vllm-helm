@@ -22,6 +22,9 @@ keywords:
 - serving
 - gpu
 - pytorch
+maintainers:
+- email: timwu@ardge.com
+  name: ardge-timwu
 name: vllm
 sources:
 - https://github.com/vllm-project/vllm
