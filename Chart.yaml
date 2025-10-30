@@ -12,7 +12,6 @@ description: A fork of the original vLLM Helm chart that uses the official image
   engine for Large Language Models (LLMs). This chart deploys vLLM as a Kubernetes
   service for scalable AI inference.
 home: https://github.com/vllm-project/vllm
-icon: https://charts.arktecquant.com/img/charts/vllm.png
 keywords:
 - oss
 - vllm
@@ -23,11 +22,7 @@ keywords:
 - serving
 - gpu
 - pytorch
-maintainers:
-- email: helm.chart.maintainers@arktecquant.com
-  name: Arktec Quant Devex Agent
 name: vllm
 sources:
 - https://github.com/vllm-project/vllm
-- https://github.com/arktecquant/charts
 version: 0.11.0
