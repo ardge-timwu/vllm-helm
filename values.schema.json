@@ -1,0 +1,339 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "type": "object",
+  "properties": {
+    "replicaCount": {
+      "type": "integer",
+      "title": "Number of replicas",
+      "form": true,
+      "description": "Number of vLLM replicas to deploy",
+      "minimum": 1,
+      "default": 1
+    },
+    "image": {
+      "type": "object",
+      "title": "Image configuration",
+      "form": true,
+      "properties": {
+        "repository": {
+          "type": "string",
+          "title": "Image repository",
+          "form": true,
+          "default": "vllm/vllm-openai"
+        },
+        "tag": {
+          "type": "string",
+          "title": "Image tag",
+          "form": true,
+          "default": "latest"
+        },
+        "pullPolicy": {
+          "type": "string",
+          "title": "Image pull policy",
+          "form": true,
+          "enum": ["Always", "IfNotPresent", "Never"],
+          "default": "IfNotPresent"
+        }
+      }
+    },
+    "service": {
+      "type": "object",
+      "title": "Service configuration",
+      "form": true,
+      "properties": {
+        "type": {
+          "type": "string",
+          "title": "Service type",
+          "form": true,
+          "enum": ["ClusterIP", "NodePort", "LoadBalancer"],
+          "default": "ClusterIP"
+        },
+        "port": {
+          "type": "integer",
+          "title": "Service port",
+          "form": true,
+          "default": 8000
+        },
+        "targetPort": {
+          "type": "integer",
+          "title": "Target port",
+          "form": true,
+          "default": 8000
+        }
+      }
+    },
+    "vllm": {
+      "type": "object",
+      "title": "vLLM configuration",
+      "form": true,
+      "properties": {
+        "model": {
+          "type": "string",
+          "title": "Model to load",
+          "form": true,
+          "description": "Hugging Face model name or path",
+          "default": "microsoft/DialoGPT-medium"
+        },
+        "host": {
+          "type": "string",
+          "title": "Host to bind to",
+          "form": true,
+          "default": "0.0.0.0"
+        },
+        "port": {
+          "type": "integer",
+          "title": "Port to bind to",
+          "form": true,
+          "default": 8000
+        },
+        "gpuMemoryUtilization": {
+          "type": "number",
+          "title": "GPU memory utilization",
+          "form": true,
+          "description": "Fraction of GPU memory to use (0.0 to 1.0)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.9
+        },
+        "maxModelLen": {
+          "type": "integer",
+          "title": "Maximum model length",
+          "form": true,
+          "description": "Maximum sequence length",
+          "minimum": 1,
+          "default": 2048
+        },
+        "trustRemoteCode": {
+          "type": "boolean",
+          "title": "Trust remote code",
+          "form": true,
+          "description": "Allow loading models with custom code",
+          "default": false
+        },
+        "additionalArgs": {
+          "type": "array",
+          "title": "Additional arguments",
+          "form": true,
+          "description": "Additional vLLM command line arguments",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "title": "Resource configuration",
+      "form": true,
+      "properties": {
+        "limits": {
+          "type": "object",
+          "title": "Resource limits",
+          "form": true,
+          "properties": {
+            "cpu": {
+              "type": "string",
+              "title": "CPU limit",
+              "form": true,
+              "default": "2000m"
+            },
+            "memory": {
+              "type": "string",
+              "title": "Memory limit",
+              "form": true,
+              "default": "8Gi"
+            },
+            "nvidia.com/gpu": {
+              "type": "string",
+              "title": "GPU limit",
+              "form": true,
+              "default": "1"
+            }
+          }
+        },
+        "requests": {
+          "type": "object",
+          "title": "Resource requests",
+          "form": true,
+          "properties": {
+            "cpu": {
+              "type": "string",
+              "title": "CPU request",
+              "form": true,
+              "default": "1000m"
+            },
+            "memory": {
+              "type": "string",
+              "title": "Memory request",
+              "form": true,
+              "default": "4Gi"
+            },
+            "nvidia.com/gpu": {
+              "type": "string",
+              "title": "GPU request",
+              "form": true,
+              "default": "1"
+            }
+          }
+        }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "title": "Persistent storage",
+      "form": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "title": "Enable persistent storage",
+          "form": true,
+          "default": true
+        },
+        "size": {
+          "type": "string",
+          "title": "Storage size",
+          "form": true,
+          "default": "50Gi"
+        },
+        "storageClass": {
+          "type": "string",
+          "title": "Storage class",
+          "form": true,
+          "description": "Storage class for persistent volume"
+        },
+        "accessMode": {
+          "type": "string",
+          "title": "Access mode",
+          "form": true,
+          "enum": ["ReadWriteOnce", "ReadWriteMany", "ReadOnlyMany"],
+          "default": "ReadWriteOnce"
+        }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "title": "Ingress configuration",
+      "form": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "title": "Enable ingress",
+          "form": true,
+          "default": false
+        },
+        "className": {
+          "type": "string",
+          "title": "Ingress class",
+          "form": true,
+          "description": "Ingress class name"
+        },
+        "hosts": {
+          "type": "array",
+          "title": "Ingress hosts",
+          "form": true,
+          "items": {
+            "type": "object",
+            "properties": {
+              "host": {
+                "type": "string",
+                "title": "Host name"
+              },
+              "paths": {
+                "type": "array",
+                "title": "Paths",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "title": "Path"
+                    },
+                    "pathType": {
+                      "type": "string",
+                      "title": "Path type",
+                      "enum": ["Prefix", "Exact", "ImplementationSpecific"]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "autoscaling": {
+      "type": "object",
+      "title": "Autoscaling configuration",
+      "form": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "title": "Enable autoscaling",
+          "form": true,
+          "default": false
+        },
+        "minReplicas": {
+          "type": "integer",
+          "title": "Minimum replicas",
+          "form": true,
+          "minimum": 1,
+          "default": 1
+        },
+        "maxReplicas": {
+          "type": "integer",
+          "title": "Maximum replicas",
+          "form": true,
+          "minimum": 1,
+          "default": 100
+        },
+        "targetCPUUtilizationPercentage": {
+          "type": "integer",
+          "title": "Target CPU utilization",
+          "form": true,
+          "minimum": 1,
+          "maximum": 100,
+          "default": 80
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "title": "Monitoring configuration",
+      "form": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "title": "Enable monitoring",
+          "form": true,
+          "default": false
+        },
+        "serviceMonitor": {
+          "type": "object",
+          "title": "ServiceMonitor configuration",
+          "form": true,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "title": "Enable ServiceMonitor",
+              "form": true,
+              "default": false
+            },
+            "interval": {
+              "type": "string",
+              "title": "Scrape interval",
+              "form": true,
+              "default": "30s"
+            },
+            "scrapeTimeout": {
+              "type": "string",
+              "title": "Scrape timeout",
+              "form": true,
+              "default": "10s"
+            }
+          }
+        }
+      }
+    }
+  }
+}

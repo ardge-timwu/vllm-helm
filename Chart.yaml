@@ -1,0 +1,33 @@
+annotations:
+  category: AI/ML
+  images: |
+    - name: vllm
+      image: vllm/vllm-openai:v0.11.0
+  licenses: Apache-2.0
+  tanzuCategory: service
+apiVersion: v2
+appVersion: 0.11.0
+description: A fork of the original vLLM Helm chart that uses the official image from
+  the vLLM Project. vLLM is a high-throughput and memory-efficient inference and serving
+  engine for Large Language Models (LLMs). This chart deploys vLLM as a Kubernetes
+  service for scalable AI inference.
+home: https://github.com/vllm-project/vllm
+icon: https://charts.arktecquant.com/img/charts/vllm.png
+keywords:
+- oss
+- vllm
+- ai
+- ml
+- llm
+- inference
+- serving
+- gpu
+- pytorch
+maintainers:
+- email: helm.chart.maintainers@arktecquant.com
+  name: Arktec Quant Devex Agent
+name: vllm
+sources:
+- https://github.com/vllm-project/vllm
+- https://github.com/arktecquant/charts
+version: 0.11.0
