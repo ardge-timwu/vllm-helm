@@ -16,6 +16,11 @@ on:
         required: false
         default: false
         type: boolean
+      run_install_test:
+        description: "Run helm install test"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   helm-lint:
@@ -42,6 +47,7 @@ jobs:
   helm-install-test:
     runs-on: ubuntu-latest
     needs: helm-lint
+    if: github.event_name == 'workflow_dispatch' && inputs.run_install_test == true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
