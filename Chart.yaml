@@ -28,4 +28,4 @@ maintainers:
 name: vllm
 sources:
 - https://github.com/vllm-project/vllm
-version: nvdgx
+version: 0.0.0-nvdgx
