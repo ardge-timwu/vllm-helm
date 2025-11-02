@@ -14,19 +14,19 @@ spec:
   template:
     metadata:
       annotations:
-        {{- if .Values.scheduler.useKAIScheduler }}
-        gpu-memory: {{ .Values.scheduler.gpuMemoryMiB | quote }}
+        {{- if .Values.kaischeduler }}
+        gpu-memory: {{ .Values.kaischeduler.gpuMemoryMiB | quote }}
         {{- end }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
       labels:
         {{- include "vllm.selectorLabels" . | nindent 8 }}
-        {{- if .Values.scheduler.useKAIScheduler }}
-        kai.scheduler/queue: {{ .Values.scheduler.queue }}
+        {{- if .Values.kaischeduler }}
+        kai.scheduler/queue: {{ .Values.kaischeduler.queue }}
         {{- end }}
     spec:
-      {{- if .Values.scheduler.useKAIScheduler }}
+      {{- if .Values.kaischeduler }}
       schedulerName: kai-scheduler
       {{- end }}
       {{- with .Values.imagePullSecrets }}
@@ -101,7 +101,7 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
           resources:
-            {{- if .Values.scheduler.useKAIScheduler }}
+            {{- if .Values.kaischeduler }}
             {{- if .Values.resources.limits }}
             limits:
               {{- if .Values.resources.limits.cpu }}

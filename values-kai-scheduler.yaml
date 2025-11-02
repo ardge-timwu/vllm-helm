@@ -69,10 +69,9 @@ tolerations: []
 affinity: {}
 
 # KAI Scheduler Configuration
-# Enable this for GPU sharing with memory-based allocation
-scheduler:
-  # Set to true to use KAI scheduler instead of default Kubernetes scheduler
-  useKAIScheduler: true
+# Define this section to enable KAI scheduler for GPU sharing with memory-based allocation
+# Leave as empty {} in values.yaml to use default Kubernetes scheduler
+kaischeduler:
   # Queue name for KAI scheduler workload management
   queue: "default"
   # GPU memory allocation in MiB

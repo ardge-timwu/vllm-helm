@@ -5,22 +5,14 @@
 # - Model and settings from the Docker command example
 
 # KAI Scheduler Configuration
-scheduler:
-  useKAIScheduler: true
-  queue: "default"
-  gpuMemoryMiB: 2000  # 2GB GPU memory allocation
+kaischeduler:
+  queue: "test"
+  gpuMemoryMiB: 5000  # 5GB GPU memory allocation
 
 # vLLM Configuration
 vllm:
-  model: "Qwen/Qwen3-30B-A3B-Instruct-2507-FP8"
+  model: "Qwen/Qwen3-0.6B-FP8"
   trustRemoteCode: true
-  gpuMemoryUtilization: 0.4
+  gpuMemoryUtilization: 0.2
 
-# Resource limits (CPU/memory only, GPU handled by KAI scheduler)
-resources:
-  limits:
-    cpu: 2000m
-    memory: 8Gi
-  requests:
-    cpu: 1000m
-    memory: 4Gi
+

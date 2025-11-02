@@ -77,16 +77,12 @@ tolerations: []
 
 affinity: {}
 
-# Scheduler configuration
-scheduler:
-  # Use KAI scheduler for GPU sharing
-  # Set to true to enable KAI scheduler, false for default Kubernetes scheduler
-  useKAIScheduler: false
-  # KAI scheduler queue name (only used when useKAIScheduler is true)
-  queue: "default"
-  # GPU memory allocation in MiB (only used when useKAIScheduler is true)
-  # When using KAI scheduler, this overrides resources.limits.nvidia.com/gpu
-  gpuMemoryMiB: 8000
+# KAI Scheduler configuration for GPU sharing
+# If this section is defined (not empty), KAI scheduler will be used
+# If empty or omitted, default Kubernetes scheduler will be used
+kaischeduler: {}
+  # queue: "default"
+  # gpuMemoryMiB: 8000  # GPU memory allocation in MiB
 
 # vLLM specific configuration
 vllm:

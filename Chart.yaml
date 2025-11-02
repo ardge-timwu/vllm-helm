@@ -2,15 +2,15 @@ annotations:
   category: AI/ML
   images: |
     - name: vllm
-      image: vllm/vllm-openai:v0.11.0
+      image: nvcr.io/nvidia/vllm:25.09-py3
   licenses: Apache-2.0
   tanzuCategory: service
 apiVersion: v2
-appVersion: 0.11.0
-description: A fork of the original vLLM Helm chart that uses the official image from
-  the vLLM Project. vLLM is a high-throughput and memory-efficient inference and serving
-  engine for Large Language Models (LLMs). This chart deploys vLLM as a Kubernetes
-  service for scalable AI inference.
+appVersion: 25.09-py3
+description: A Helm chart for deploying NVIDIA vLLM with support for KAI scheduler.
+  vLLM is a high-throughput and memory-efficient inference and serving engine for
+  Large Language Models (LLMs). This chart deploys vLLM as a Kubernetes service
+  for scalable AI inference with GPU sharing capabilities.
 home: https://github.com/vllm-project/vllm
 keywords:
 - oss
@@ -28,4 +28,4 @@ maintainers:
 name: vllm
 sources:
 - https://github.com/vllm-project/vllm
-version: 0.11.0
+version: nvdgx
