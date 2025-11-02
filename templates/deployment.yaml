@@ -50,6 +50,8 @@ spec:
               containerPort: {{ .Values.vllm.port }}
               protocol: TCP
           env:
+            - name: VLLM_PORT
+              value: {{ .Values.vllm.port | quote }}
             {{- range .Values.vllm.env }}
             - name: {{ .name }}
               value: {{ .value | quote }}
