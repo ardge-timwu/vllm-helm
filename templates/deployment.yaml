@@ -26,6 +26,7 @@ spec:
         kai.scheduler/queue: {{ .Values.kaischeduler.queue }}
         {{- end }}
     spec:
+      runtimeClassName: nvidia
       {{- if .Values.kaischeduler }}
       schedulerName: kai-scheduler
       {{- end }}
