@@ -5,10 +5,10 @@
 replicaCount: 1
 
 image:
-  repository: vllm/vllm-openai
+  repository: nvcr.io/nvidia/vllm
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "v0.11.0"
+  tag: "25.09-py3"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -25,16 +25,9 @@ serviceAccount:
 
 podAnnotations: {}
 
-podSecurityContext:
-  fsGroup: 2000
+podSecurityContext: {}
 
-securityContext:
-  capabilities:
-    drop:
-    - ALL
-  readOnlyRootFilesystem: false
-  runAsNonRoot: true
-  runAsUser: 1000
+securityContext: {}
 
 service:
   type: ClusterIP
@@ -84,6 +77,17 @@ tolerations: []
 
 affinity: {}
 
+# Scheduler configuration
+scheduler:
+  # Use KAI scheduler for GPU sharing
+  # Set to true to enable KAI scheduler, false for default Kubernetes scheduler
+  useKAIScheduler: false
+  # KAI scheduler queue name (only used when useKAIScheduler is true)
+  queue: "default"
+  # GPU memory allocation in MiB (only used when useKAIScheduler is true)
+  # When using KAI scheduler, this overrides resources.limits.nvidia.com/gpu
+  gpuMemoryMiB: 8000
+
 # vLLM specific configuration
 vllm:
   # Model configuration
@@ -97,13 +101,10 @@ vllm:
   # GPU configuration
   gpuMemoryUtilization: 0.9
   maxModelLen: 2048
+  tensorParallelSize: 1
 
   # Additional vLLM arguments
   additionalArgs: []
-
-  # v0.11.0 specific features
-  cudaGraphMode: "FULL_AND_PIECEWISE"  # New default in v0.11.0
-  asyncScheduling: false  # Disabled due to known issues in v0.11.0
 
   # Environment variables
   env:

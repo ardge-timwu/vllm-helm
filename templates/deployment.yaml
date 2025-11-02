@@ -13,13 +13,22 @@ spec:
       {{- include "vllm.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
       annotations:
+        {{- if .Values.scheduler.useKAIScheduler }}
+        gpu-memory: {{ .Values.scheduler.gpuMemoryMiB | quote }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- end }}
       labels:
         {{- include "vllm.selectorLabels" . | nindent 8 }}
+        {{- if .Values.scheduler.useKAIScheduler }}
+        kai.scheduler/queue: {{ .Values.scheduler.queue }}
+        {{- end }}
     spec:
+      {{- if .Values.scheduler.useKAIScheduler }}
+      schedulerName: kai-scheduler
+      {{- end }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -29,8 +38,10 @@ spec:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: {{ .Chart.Name }}
+          {{- if .Values.securityContext }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- end }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
@@ -56,8 +67,10 @@ spec:
             - name: TRUST_REMOTE_CODE
               value: "true"
             {{- end }}
+          command:
+            - "vllm"
+            - "serve"
           args:
-            - "--model"
             - {{ .Values.vllm.model | quote }}
             - "--host"
             - {{ .Values.vllm.host | quote }}
@@ -67,6 +80,8 @@ spec:
             - {{ .Values.vllm.gpuMemoryUtilization | quote }}
             - "--max-model-len"
             - {{ .Values.vllm.maxModelLen | quote }}
+            - "--tensor-parallel-size"
+            - {{ .Values.vllm.tensorParallelSize | quote }}
             {{- if .Values.vllm.trustRemoteCode }}
             - "--trust-remote-code"
             {{- end }}
@@ -86,11 +101,32 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
           resources:
+            {{- if .Values.scheduler.useKAIScheduler }}
+            {{- if .Values.resources.limits }}
+            limits:
+              {{- if .Values.resources.limits.cpu }}
+              cpu: {{ .Values.resources.limits.cpu }}
+              {{- end }}
+              {{- if .Values.resources.limits.memory }}
+              memory: {{ .Values.resources.limits.memory }}
+              {{- end }}
+            {{- end }}
+            {{- if .Values.resources.requests }}
+            requests:
+              {{- if .Values.resources.requests.cpu }}
+              cpu: {{ .Values.resources.requests.cpu }}
+              {{- end }}
+              {{- if .Values.resources.requests.memory }}
+              memory: {{ .Values.resources.requests.memory }}
+              {{- end }}
+            {{- end }}
+            {{- else }}
             {{- toYaml .Values.resources | nindent 12 }}
+            {{- end }}
           {{- if .Values.persistence.enabled }}
           volumeMounts:
             - name: model-storage
-              mountPath: /models
+              mountPath: /root/.cache
           {{- end }}
       {{- if .Values.persistence.enabled }}
       volumes:
