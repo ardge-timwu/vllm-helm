@@ -1,0 +1,129 @@
+# Example values.yaml for deploying vLLM with NVIDIA image and KAI scheduler
+# This example integrates:
+# - NVIDIA vLLM image (nvcr.io/nvidia/vllm:25.09-py3)
+# - KAI scheduler for GPU memory-based sharing
+# - Configuration from the Docker command example
+
+replicaCount: 1
+
+image:
+  repository: nvcr.io/nvidia/vllm
+  pullPolicy: IfNotPresent
+  tag: "25.09-py3"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+# Empty security contexts to allow GPU access
+podSecurityContext: {}
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: vllm.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Resource configuration for KAI scheduler
+# When using KAI scheduler, GPU allocation is handled via gpu-memory annotation
+# Only CPU and memory resources are specified here
+resources:
+  limits:
+    cpu: 2000m
+    memory: 8Gi
+    # nvidia.com/gpu is excluded when scheduler.useKAIScheduler is true
+    nvidia.com/gpu: "1"  # Only used when useKAIScheduler is false
+  requests:
+    cpu: 1000m
+    memory: 4Gi
+    nvidia.com/gpu: "1"  # Only used when useKAIScheduler is false
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# KAI Scheduler Configuration
+# Define this section to enable KAI scheduler for GPU sharing with memory-based allocation
+# Leave as empty {} in values.yaml to use default Kubernetes scheduler
+kaischeduler:
+  # Queue name for KAI scheduler workload management
+  queue: "default"
+  # GPU memory allocation in MiB
+  # This example requests 2GB (2000 MiB) as shown in KAI scheduler documentation
+  # Adjust based on your model's GPU memory requirements
+  gpuMemoryMiB: 2000
+
+# vLLM specific configuration
+# Based on the Docker command example
+vllm:
+  # Model configuration - using Qwen model from the example
+  model: "Qwen/Qwen3-30B-A3B-Instruct-2507-FP8"
+  # Trust remote code as specified in the Docker command
+  trustRemoteCode: true
+
+  # Server configuration
+  host: "0.0.0.0"
+  port: 8000
+
+  # GPU configuration
+  # GPU memory utilization set to 0.4 as in the Docker example
+  gpuMemoryUtilization: 0.4
+  maxModelLen: 2048
+  # Tensor parallel size set to 1 as in the Docker example
+  tensorParallelSize: 1
+
+  # Additional vLLM arguments
+  # Add any extra arguments here if needed
+  additionalArgs: []
+
+  # Environment variables
+  env:
+    - name: CUDA_VISIBLE_DEVICES
+      value: "0"
+    - name: VLLM_USE_MODELSCOPE
+      value: "False"
+
+# Persistent volume for model storage
+# Maps to /root/.cache (HuggingFace default cache location)
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  # 50Gi should be sufficient for most models
+  # Adjust based on your model size
+  size: 50Gi
+  annotations: {}
+
+# Monitoring
+monitoring:
+  enabled: false
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s

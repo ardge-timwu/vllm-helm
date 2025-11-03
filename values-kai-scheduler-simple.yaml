@@ -1,0 +1,18 @@
+# Minimal example for deploying vLLM with KAI scheduler
+# This configuration uses:
+# - NVIDIA vLLM image instead of the official vllm/vllm-openai
+# - KAI scheduler for GPU memory-based sharing
+# - Model and settings from the Docker command example
+
+# KAI Scheduler Configuration
+kaischeduler:
+  queue: "test"
+  gpuMemoryMiB: 5000  # 5GB GPU memory allocation
+
+# vLLM Configuration
+vllm:
+  model: "Qwen/Qwen3-0.6B-FP8"
+  trustRemoteCode: true
+  gpuMemoryUtilization: 0.2
+
+
