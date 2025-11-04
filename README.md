@@ -295,7 +295,7 @@ The following table lists the configurable parameters of the vLLM chart and thei
 | `vllm.maxModelLen` | Maximum model length | `2048` |
 | `vllm.cudaGraphMode` | CUDA graph mode (v0.11.0+) | `FULL_AND_PIECEWISE` |
 | `vllm.asyncScheduling` | Async scheduling (disabled in v0.11.0) | `false` |
-| `resources.limits.nvidia.com/gpu` | GPU resource limit | `1` |
+| `resources` | Pod resource requests and limits | `{}` (not set) |
 | `persistence.enabled` | Enable persistent storage | `true` |
 | `persistence.existingClaim` | Use existing PVC instead of creating new one | `""` (create new) |
 | `persistence.size` | Storage size (when creating new PVC) | `50Gi` |
@@ -355,6 +355,63 @@ helm install my-vllm ardge-timwu/vllm-helm \
   --set readinessProbe.enabled=false
 ```
 
+## Resource Management
+
+### Memory Requirements
+
+By default, this chart does **not** set resource limits or requests. This gives Kubernetes maximum flexibility but means:
+- Pods can use all available node memory
+- Risk of OOMKilled if the model is too large for available memory
+- No memory-based scheduling guarantees
+
+**Important**: vLLM model memory requirements vary greatly:
+- Small models (< 1B parameters): 4-8 GB
+- Medium models (7B parameters): 16-32 GB
+- Large models (13B+ parameters): 32-80+ GB
+
+### Setting Resource Limits
+
+To prevent OOMKilled errors and ensure proper scheduling, set memory limits based on your model:
+
+```bash
+# For a 7B parameter model
+helm install my-vllm ardge-timwu/vllm-helm \
+  --set resources.limits.memory=24Gi \
+  --set resources.requests.memory=16Gi \
+  --set resources.limits.nvidia.com/gpu=1
+```
+
+Or in values.yaml:
+
+```yaml
+resources:
+  limits:
+    cpu: 4000m
+    memory: 24Gi
+    nvidia.com/gpu: "1"
+  requests:
+    cpu: 2000m
+    memory: 16Gi
+    nvidia.com/gpu: "1"
+```
+
+### Calculating Memory Requirements
+
+A rough formula for estimating memory needs:
+```
+Memory (GB) = (Model Parameters × Bytes per Parameter × 1.2) / 1,000,000,000
+
+For FP16: Bytes per Parameter = 2
+For FP32: Bytes per Parameter = 4
+The 1.2 factor accounts for overhead
+```
+
+Example for a 7B FP16 model:
+```
+(7,000,000,000 × 2 × 1.2) / 1,000,000,000 = ~17 GB minimum
+Recommend setting limit to 24-32 GB for safety
+```
+
 ## Examples
 
 ### Basic Installation
@@ -369,6 +426,17 @@ helm install vllm ardge-timwu/vllm-helm
 helm install vllm ardge-timwu/vllm-helm \
   --set vllm.model="microsoft/DialoGPT-large" \
   --set vllm.maxModelLen=4096
+```
+
+### With Resource Limits
+
+```bash
+# Recommended for production to prevent OOMKilled
+helm install vllm ardge-timwu/vllm-helm \
+  --set vllm.model="meta-llama/Llama-2-7b-hf" \
+  --set resources.limits.memory=24Gi \
+  --set resources.requests.memory=16Gi \
+  --set resources.limits.nvidia.com/gpu=1
 ```
 
 ### GPU Configuration
