@@ -117,6 +117,7 @@ vllm:
 # Persistent volume for model storage
 persistence:
   enabled: true
+  # existingClaim: ""  # Use an existing PVC instead of creating a new one
   storageClass: ""
   accessMode: ReadWriteOnce
   size: 50Gi

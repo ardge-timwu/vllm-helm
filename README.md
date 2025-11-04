@@ -133,9 +133,32 @@ helm delete my-vllm
 
 ## Storage Configuration
 
+### Using an Existing PVC
+
+If you already have a PersistentVolumeClaim (PVC) with your models, you can use it directly instead of creating a new one:
+
+```bash
+helm install my-vllm ardge-timwu/vllm-helm \
+  --set persistence.enabled=true \
+  --set persistence.existingClaim=my-existing-pvc
+```
+
+Or in your values.yaml:
+
+```yaml
+persistence:
+  enabled: true
+  existingClaim: "my-existing-pvc"
+```
+
+This is useful when:
+- Sharing models across multiple vLLM deployments
+- Using pre-populated model caches
+- Managing PVCs independently of Helm releases
+
 ### Using HostPath Volumes
 
-By default, this chart creates a PersistentVolumeClaim (PVC) that expects dynamic storage provisioning. However, you can also use a HostPath volume to mount a directory from the host node. This is useful for:
+By default, if no `existingClaim` is specified, the chart creates a PersistentVolumeClaim (PVC) that expects dynamic storage provisioning. However, you can also use a HostPath volume to mount a directory from the host node. This is useful for:
 
 - Development and testing environments
 - Pre-loading models directly on the node filesystem
@@ -274,7 +297,9 @@ The following table lists the configurable parameters of the vLLM chart and thei
 | `vllm.asyncScheduling` | Async scheduling (disabled in v0.11.0) | `false` |
 | `resources.limits.nvidia.com/gpu` | GPU resource limit | `1` |
 | `persistence.enabled` | Enable persistent storage | `true` |
-| `persistence.size` | Storage size | `50Gi` |
+| `persistence.existingClaim` | Use existing PVC instead of creating new one | `""` (create new) |
+| `persistence.size` | Storage size (when creating new PVC) | `50Gi` |
+| `persistence.storageClass` | Storage class name (when creating new PVC) | `""` |
 | `livenessProbe.initialDelaySeconds` | Liveness probe initial delay | `300` (5 minutes) |
 | `livenessProbe.enabled` | Enable liveness probe | `true` |
 | `readinessProbe.initialDelaySeconds` | Readiness probe initial delay | `60` (1 minute) |
@@ -360,6 +385,13 @@ helm install vllm ardge-timwu/vllm-helm \
 helm install vllm ardge-timwu/vllm-helm \
   --set vllm.cudaGraphMode=FULL_AND_PIECEWISE \
   --set vllm.asyncScheduling=false
+```
+
+### With Existing PVC
+
+```bash
+helm install vllm ardge-timwu/vllm-helm \
+  --set persistence.existingClaim=my-models-pvc
 ```
 
 ### With Ingress

@@ -154,7 +154,7 @@ spec:
       volumes:
         - name: model-storage
           persistentVolumeClaim:
-            claimName: {{ include "vllm.fullname" . }}-pvc
+            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-pvc" (include "vllm.fullname" .)) }}
       {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
