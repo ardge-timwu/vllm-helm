@@ -122,6 +122,29 @@ persistence:
   size: 50Gi
   annotations: {}
 
+# Liveness and readiness probe configuration
+# Important: Model downloads and CUDA graph compilation can take several minutes
+# Adjust initialDelaySeconds based on your model size and network speed
+livenessProbe:
+  enabled: true
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 300  # 5 minutes - allows time for model download and compilation
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 60  # 1 minute - wait for basic initialization
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
 # Monitoring
 monitoring:
   enabled: false

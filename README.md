@@ -280,7 +280,60 @@ The following table lists the configurable parameters of the vLLM chart and thei
 | `resources.limits.nvidia.com/gpu` | GPU resource limit | `1` |
 | `persistence.enabled` | Enable persistent storage | `true` |
 | `persistence.size` | Storage size | `50Gi` |
+| `livenessProbe.initialDelaySeconds` | Liveness probe initial delay | `300` (5 minutes) |
+| `livenessProbe.enabled` | Enable liveness probe | `true` |
+| `readinessProbe.initialDelaySeconds` | Readiness probe initial delay | `60` (1 minute) |
+| `readinessProbe.enabled` | Enable readiness probe | `true` |
 | `init_drop_cache` | Enable drop-cache init container (requires privileged pod) | `false` |
+
+## Health Probes and Startup Time
+
+### Understanding Model Loading
+
+When vLLM starts, it needs to:
+1. Download the model from HuggingFace (if not cached)
+2. Load the model into GPU memory
+3. Compile CUDA graphs for optimized inference
+
+This process can take several minutes, especially for large models. The default configuration allows 5 minutes for the liveness probe and 1 minute for the readiness probe.
+
+### Adjusting Probe Timings
+
+For large models (>10GB) or slow network connections, you may need to increase the probe delays:
+
+```bash
+helm install my-vllm ardge-timwu/vllm-helm \
+  --set livenessProbe.initialDelaySeconds=600 \
+  --set readinessProbe.initialDelaySeconds=120
+```
+
+Or in your values.yaml:
+
+```yaml
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 600  # 10 minutes for very large models
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 120  # 2 minutes
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+```
+
+### Disabling Probes During Development
+
+For development or debugging, you can disable the probes entirely:
+
+```bash
+helm install my-vllm ardge-timwu/vllm-helm \
+  --set livenessProbe.enabled=false \
+  --set readinessProbe.enabled=false
+```
 
 ## Examples
 
