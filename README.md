@@ -136,6 +136,128 @@ To uninstall/delete the `my-vllm` deployment:
 helm delete my-vllm
 ```
 
+## Storage Configuration
+
+### Using HostPath Volumes
+
+By default, this chart creates a PersistentVolumeClaim (PVC) that expects dynamic storage provisioning. However, you can also use a HostPath volume to mount a directory from the host node. This is useful for:
+
+- Development and testing environments
+- Pre-loading models directly on the node filesystem
+- Accessing existing model files on worker nodes
+- Avoiding network storage overhead
+
+#### Step 1: Create a HostPath PersistentVolume
+
+First, create a PersistentVolume (PV) that uses HostPath storage. Save this as `hostpath-pv.yaml`:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: vllm-models-pv
+  labels:
+    type: local
+    app: vllm
+spec:
+  capacity:
+    storage: 50Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: vllm-hostpath
+  hostPath:
+    path: /data/vllm-models  # Change this to your desired path
+    type: DirectoryOrCreate
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - your-node-name  # Change this to your actual node name
+```
+
+Apply the PersistentVolume:
+
+```bash
+kubectl apply -f hostpath-pv.yaml
+```
+
+#### Step 2: Configure values.yaml
+
+Update your `values.yaml` (or use `--set` flags) to use the HostPath storage class:
+
+```yaml
+persistence:
+  enabled: true
+  storageClass: "vllm-hostpath"  # Match the storageClassName from PV
+  accessMode: ReadWriteOnce
+  size: 50Gi
+  annotations: {}
+
+# If using HostPath, you'll want to schedule the pod on the same node
+nodeSelector:
+  kubernetes.io/hostname: your-node-name  # Must match the node in PV
+```
+
+#### Step 3: Install the Chart
+
+```bash
+helm install my-vllm ardge-timwu/vllm-helm -f values.yaml
+```
+
+Or using command-line flags:
+
+```bash
+helm install my-vllm ardge-timwu/vllm-helm \
+  --set persistence.enabled=true \
+  --set persistence.storageClass=vllm-hostpath \
+  --set persistence.size=50Gi \
+  --set nodeSelector."kubernetes\.io/hostname"=your-node-name
+```
+
+#### Important Considerations
+
+1. **Node Affinity**: HostPath volumes are node-specific. The pod must be scheduled on the same node where the path exists. Use `nodeSelector` or `nodeAffinity` to ensure this.
+
+2. **Directory Permissions**: Ensure the directory on the host has appropriate permissions. The vLLM container typically runs as root, so the directory should be readable/writable:
+   ```bash
+   sudo mkdir -p /data/vllm-models
+   sudo chmod 755 /data/vllm-models
+   ```
+
+3. **Pre-loading Models**: If you want to pre-load models into the HostPath directory:
+   ```bash
+   # Models are cached in /root/.cache inside the container
+   # which maps to the HostPath directory
+   sudo mkdir -p /data/vllm-models/huggingface/hub
+   # Place your model files in this directory
+   ```
+
+4. **Multi-node Clusters**: HostPath volumes are not suitable for multi-replica deployments across different nodes. For multi-node deployments, consider using:
+   - NFS or other network storage
+   - Dynamic provisioners (AWS EBS, GCE PD, etc.)
+   - Shared filesystem solutions (CephFS, GlusterFS)
+
+5. **Reclaim Policy**: The example uses `Retain` policy, which means the data persists even after the PV is deleted. Change to `Delete` if you want automatic cleanup.
+
+#### Alternative: Direct HostPath Mount (Without PV/PVC)
+
+For simpler setups, you can modify the deployment to use HostPath directly without PV/PVC. Create a custom values file:
+
+```yaml
+# Disable the PVC
+persistence:
+  enabled: false
+
+# Add this in your deployment by creating a custom template
+# Note: This requires modifying the chart templates
+```
+
+However, using PV/PVC is the recommended Kubernetes approach as it provides better abstraction and lifecycle management.
+
 ## Configuration
 
 The following table lists the configurable parameters of the vLLM chart and their default values.
