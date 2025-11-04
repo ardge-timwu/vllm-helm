@@ -17,6 +17,107 @@ vLLM is a high-throughput and memory-efficient inference and serving engine for 
 - GPU-enabled nodes with NVIDIA drivers and CUDA support
 - NVIDIA device plugin installed in your cluster
 
+## Privileged Pods Requirements
+
+When enabling the `init_drop_cache` feature, the pod requires privileged access to drop system caches. This requires additional cluster-side configuration:
+
+### Security Context Setup
+
+The drop-cache init container requires:
+- `privileged: true` - to write to `/proc/sys/vm/drop_caches`
+- `hostPID: true` - to access host process namespace
+- `hostNetwork: true` - to access host network namespace
+
+### Kubernetes 1.25+ (Pod Security Standards)
+
+If your cluster uses Pod Security Standards (PSS), you need to configure the namespace to allow privileged pods:
+
+```bash
+# Label the namespace to use privileged Pod Security Standard
+kubectl label namespace <your-namespace> \
+  pod-security.kubernetes.io/enforce=privileged \
+  pod-security.kubernetes.io/audit=privileged \
+  pod-security.kubernetes.io/warn=privileged
+```
+
+Or configure namespace-specific exceptions:
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vllm-namespace
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged
+```
+
+### Kubernetes 1.21-1.24 (PodSecurityPolicy - Deprecated)
+
+If your cluster still uses PodSecurityPolicy, create a policy allowing privileged pods:
+
+```yaml
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: vllm-privileged
+spec:
+  privileged: true
+  hostPID: true
+  hostNetwork: true
+  allowPrivilegeEscalation: true
+  allowedCapabilities:
+  - '*'
+  volumes:
+  - '*'
+  hostPorts:
+  - min: 0
+    max: 65535
+  runAsUser:
+    rule: 'RunAsAny'
+  seLinux:
+    rule: 'RunAsAny'
+  supplementalGroups:
+    rule: 'RunAsAny'
+  fsGroup:
+    rule: 'RunAsAny'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vllm-privileged-psp
+rules:
+- apiGroups: ['policy']
+  resources: ['podsecuritypolicies']
+  verbs: ['use']
+  resourceNames: ['vllm-privileged']
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vllm-privileged-psp
+roleRef:
+  kind: ClusterRole
+  name: vllm-privileged-psp
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: <vllm-service-account-name>
+  namespace: <your-namespace>
+```
+
+### Security Considerations
+
+**Warning**: Enabling `init_drop_cache: true` grants the pod significant privileges that could be a security risk. Only enable this feature when:
+
+1. You need to drop system caches for performance benchmarking or testing
+2. You trust all users who can deploy to the namespace
+3. Your cluster security policy allows privileged pods
+4. You understand the security implications of hostPID and hostNetwork access
+
+**Recommendation**: Use this feature only in dedicated namespaces for performance testing, not in production environments with untrusted workloads.
+
 ## Installing the Chart
 
 To install the chart with the release name `my-vllm`:
@@ -57,6 +158,7 @@ The following table lists the configurable parameters of the vLLM chart and thei
 | `resources.limits.nvidia.com/gpu` | GPU resource limit | `1` |
 | `persistence.enabled` | Enable persistent storage | `true` |
 | `persistence.size` | Storage size | `50Gi` |
+| `init_drop_cache` | Enable drop-cache init container (requires privileged pod) | `false` |
 
 ## Examples
 
@@ -97,6 +199,25 @@ helm install vllm ardge-timwu/vllm-helm \
   --set ingress.enabled=true \
   --set ingress.hosts[0].host=vllm.example.com
 ```
+
+### With Cache Dropping (Privileged Mode)
+
+**Prerequisites**: Ensure your namespace is configured for privileged pods (see [Privileged Pods Requirements](#privileged-pods-requirements))
+
+```bash
+# First, configure the namespace for privileged pods (K8s 1.25+)
+kubectl label namespace <your-namespace> \
+  pod-security.kubernetes.io/enforce=privileged
+
+# Then install with cache dropping enabled
+helm install vllm ardge-timwu/vllm-helm \
+  --set init_drop_cache=true
+```
+
+This configuration will:
+- Enable `hostPID` and `hostNetwork` for the pod
+- Add an init container that runs `sync; echo 3 > /proc/sys/vm/drop_caches`
+- Clear system caches before starting vLLM (useful for performance benchmarking)
 
 ## API Usage
 

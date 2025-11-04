@@ -26,6 +26,10 @@ spec:
         kai.scheduler/queue: {{ .Values.kaischeduler.queue }}
         {{- end }}
     spec:
+      {{- if .Values.init_drop_cache }}
+      hostPID: true
+      hostNetwork: true
+      {{- end }}
       runtimeClassName: nvidia
       {{- if .Values.kaischeduler }}
       schedulerName: kai-scheduler
@@ -37,6 +41,14 @@ spec:
       serviceAccountName: {{ include "vllm.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.init_drop_cache }}
+      initContainers:
+        - name: drop-cache
+          image: busybox
+          securityContext:
+            privileged: true
+          command: ["sh", "-c", "sync; echo 3 > /proc/sys/vm/drop_caches"]
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           {{- if .Values.securityContext }}

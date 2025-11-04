@@ -29,6 +29,11 @@ podSecurityContext: {}
 
 securityContext: {}
 
+# Drop cache init container configuration
+# When enabled, adds an init container that drops system caches before starting vLLM
+# Requires hostPID, hostNetwork, and privileged security context
+init_drop_cache: false
+
 service:
   type: ClusterIP
   port: 8000
