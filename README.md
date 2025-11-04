@@ -26,7 +26,6 @@ When enabling the `init_drop_cache` feature, the pod requires privileged access 
 The drop-cache init container requires:
 - `privileged: true` - to write to `/proc/sys/vm/drop_caches`
 - `hostPID: true` - to access host process namespace
-- `hostNetwork: true` - to access host network namespace
 
 ### Kubernetes 1.25+ (Pod Security Standards)
 
@@ -65,15 +64,11 @@ metadata:
 spec:
   privileged: true
   hostPID: true
-  hostNetwork: true
   allowPrivilegeEscalation: true
   allowedCapabilities:
   - '*'
   volumes:
   - '*'
-  hostPorts:
-  - min: 0
-    max: 65535
   runAsUser:
     rule: 'RunAsAny'
   seLinux:
@@ -114,7 +109,7 @@ subjects:
 1. You need to drop system caches for performance benchmarking or testing
 2. You trust all users who can deploy to the namespace
 3. Your cluster security policy allows privileged pods
-4. You understand the security implications of hostPID and hostNetwork access
+4. You understand the security implications of hostPID access
 
 **Recommendation**: Use this feature only in dedicated namespaces for performance testing, not in production environments with untrusted workloads.
 
@@ -390,9 +385,11 @@ helm install vllm ardge-timwu/vllm-helm \
 ```
 
 This configuration will:
-- Enable `hostPID` and `hostNetwork` for the pod
-- Add an init container that runs `sync; echo 3 > /proc/sys/vm/drop_caches`
+- Enable `hostPID` for the pod
+- Add a privileged init container that runs `sync; echo 3 > /proc/sys/vm/drop_caches`
 - Clear system caches before starting vLLM (useful for performance benchmarking)
+
+**Note**: Multiple releases can run simultaneously on the same node since this does not use `hostNetwork`.
 
 ## API Usage
 

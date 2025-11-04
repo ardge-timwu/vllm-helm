@@ -28,7 +28,6 @@ spec:
     spec:
       {{- if .Values.init_drop_cache }}
       hostPID: true
-      hostNetwork: true
       {{- end }}
       runtimeClassName: nvidia
       {{- if .Values.kaischeduler }}
