@@ -40,17 +40,12 @@ spec:
       serviceAccountName: {{ include "vllm.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      {{- if .Values.init_drop_cache }}
-      initContainers:
-        - name: drop-cache
-          image: busybox
-          securityContext:
-            privileged: true
-          command: ["sh", "-c", "sync; echo 3 > /proc/sys/vm/drop_caches"]
-      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
-          {{- if .Values.securityContext }}
+          {{- if .Values.init_drop_cache }}
+          securityContext:
+            privileged: true
+          {{- else if .Values.securityContext }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           {{- end }}
@@ -81,6 +76,26 @@ spec:
             - name: TRUST_REMOTE_CODE
               value: "true"
             {{- end }}
+          {{- if .Values.init_drop_cache }}
+          command:
+            - "sh"
+            - "-c"
+            - |
+              sync; echo 3 > /proc/sys/vm/drop_caches || true
+              exec vllm serve {{ .Values.vllm.model | quote }} \
+                --host {{ .Values.vllm.host | quote }} \
+                --port {{ .Values.vllm.port | quote }} \
+                --gpu-memory-utilization {{ .Values.vllm.gpuMemoryUtilization | quote }} \
+                --max-model-len {{ .Values.vllm.maxModelLen | quote }} \
+                --tensor-parallel-size {{ .Values.vllm.tensorParallelSize | quote }} \
+                {{- if .Values.vllm.trustRemoteCode }}
+                --trust-remote-code \
+                {{- end }}
+                {{- range .Values.vllm.additionalArgs }}
+                {{ . | quote }} \
+                {{- end }}
+                $@
+          {{- else }}
           command:
             - "vllm"
             - "serve"
@@ -102,6 +117,7 @@ spec:
             {{- range .Values.vllm.additionalArgs }}
             - {{ . | quote }}
             {{- end }}
+          {{- end }}
           {{- if .Values.livenessProbe.enabled }}
           livenessProbe:
             httpGet:

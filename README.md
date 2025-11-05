@@ -21,9 +21,16 @@ vLLM is a high-throughput and memory-efficient inference and serving engine for 
 
 When enabling the `init_drop_cache` feature, the pod requires privileged access to drop system caches. This requires additional cluster-side configuration:
 
+### How It Works
+
+When `init_drop_cache: true`, the cache drop command runs **before every vLLM start**, including after container restarts. This is important for:
+- **CUDA OOM recovery**: If vLLM crashes due to CUDA out of memory, the cache will be dropped before restart
+- **Consistent benchmarking**: Every startup gets a clean cache state
+- **No init container limitations**: Unlike init containers which only run once, this runs on every container start
+
 ### Security Context Setup
 
-The drop-cache init container requires:
+The cache drop operation requires:
 - `privileged: true` - to write to `/proc/sys/vm/drop_caches`
 - `hostPID: true` - to access host process namespace
 
@@ -486,8 +493,14 @@ helm install vllm ardge-timwu/vllm-helm \
 
 This configuration will:
 - Enable `hostPID` for the pod
-- Add a privileged init container that runs `sync; echo 3 > /proc/sys/vm/drop_caches`
-- Clear system caches before starting vLLM (useful for performance benchmarking)
+- Set the container as privileged
+- Run `sync; echo 3 > /proc/sys/vm/drop_caches` before every vLLM start (including restarts)
+- Clear system caches before vLLM startup (useful for performance benchmarking and CUDA OOM recovery)
+
+**Benefits over init containers**:
+- Cache drop runs on every container restart, not just initial pod creation
+- Helps with CUDA OOM recovery by clearing caches before restart attempts
+- Ensures consistent cache state for benchmarking across restarts
 
 **Note**: Multiple releases can run simultaneously on the same node since this does not use `hostNetwork`.
 
