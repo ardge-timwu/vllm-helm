@@ -118,6 +118,35 @@ spec:
             - {{ . | quote }}
             {{- end }}
           {{- end }}
+          {{- if .Values.slowStart.enabled }}
+          {{- $startupPeriod := 15 }}
+          {{- $startupTimeout := 10 }}
+          {{- $startupInitialDelay := 30 }}
+          {{- $maxStartupSeconds := .Values.slowStart.maxStartupSeconds | int }}
+          {{- $failureThreshold := div (sub $maxStartupSeconds $startupInitialDelay) $startupPeriod | int }}
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: {{ $startupInitialDelay }}
+            periodSeconds: {{ $startupPeriod }}
+            timeoutSeconds: {{ $startupTimeout }}
+            failureThreshold: {{ $failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 2
+          {{- else }}
           {{- if .Values.startupProbe.enabled }}
           startupProbe:
             httpGet:
@@ -151,6 +180,7 @@ spec:
             periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
             failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+          {{- end }}
           {{- end }}
           resources:
             {{- if .Values.kaischeduler }}

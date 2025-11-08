@@ -307,10 +307,11 @@ The following table lists the configurable parameters of the vLLM chart and thei
 | `persistence.existingClaim` | Use existing PVC instead of creating new one | `""` (create new) |
 | `persistence.size` | Storage size (when creating new PVC) | `50Gi` |
 | `persistence.storageClass` | Storage class name (when creating new PVC) | `""` |
-| `startupProbe.enabled` | Enable startup probe (recommended) | `true` |
-| `startupProbe.failureThreshold` | Startup failures before restart | `60` (10 min) |
-| `livenessProbe.enabled` | Enable liveness probe | `true` |
-| `readinessProbe.enabled` | Enable readiness probe | `true` |
+| `slowStart.enabled` | Simple health probe configuration | `true` |
+| `slowStart.maxStartupSeconds` | Max time for container to start serving | `600` (10 min) |
+| `startupProbe.*` | Advanced manual probe config (if slowStart disabled) | See values.yaml |
+| `livenessProbe.*` | Advanced manual probe config (if slowStart disabled) | See values.yaml |
+| `readinessProbe.*` | Advanced manual probe config (if slowStart disabled) | See values.yaml |
 | `init_drop_cache` | Enable drop-cache init container (requires privileged pod) | `false` |
 
 ## Health Probes and Startup Time
@@ -324,34 +325,71 @@ When vLLM starts, it needs to:
 
 This process can take several minutes, especially for large models.
 
-### Startup Probe (Recommended Approach)
+### Simple Configuration with `slowStart` (Recommended)
 
-**By default, this chart uses a `startupProbe`** which is the Kubernetes best practice for slow-starting containers. This provides:
-
-- **Extended startup time**: Allows up to 10 minutes (configurable) for model loading
-- **Responsive health checks**: Once started, liveness/readiness probes respond quickly
-- **No need to disable probes**: Keep health monitoring active in production
-
-**How it works:**
-- Startup probe checks `/health` every 10 seconds, allowing up to 60 failures (10 minutes total)
-- Liveness and readiness probes don't start until startup probe succeeds
-- After startup succeeds, liveness/readiness provide fast failure detection
-
-**For very large models (>20GB), increase the startup time:**
+**Just specify how long your model takes to start**, and all three probes will be configured automatically:
 
 ```bash
+# For a model that takes up to 30 minutes to start
 helm install my-vllm ardge-timwu/vllm-helm \
-  --set startupProbe.failureThreshold=120  # 20 minutes (120 * 10 seconds)
+  --set slowStart.maxStartupSeconds=1800
 ```
 
 Or in values.yaml:
 
 ```yaml
+slowStart:
+  enabled: true
+  maxStartupSeconds: 1800  # 30 minutes
+```
+
+**Common configurations by model size:**
+
+```bash
+# Small models (< 7B parameters) - 5 minutes
+helm install my-vllm ardge-timwu/vllm-helm \
+  --set slowStart.maxStartupSeconds=300
+
+# Medium models (7B-13B) - 10 minutes (default)
+helm install my-vllm ardge-timwu/vllm-helm \
+  --set slowStart.maxStartupSeconds=600
+
+# Large models (13B-70B) - 30 minutes
+helm install my-vllm ardge-timwu/vllm-helm \
+  --set slowStart.maxStartupSeconds=1800
+
+# Huge models (70B+) - 60 minutes
+helm install my-vllm ardge-timwu/vllm-helm \
+  --set slowStart.maxStartupSeconds=3600
+```
+
+**What `slowStart` does automatically:**
+- Configures `startupProbe` to allow the specified startup time
+- Sets up `livenessProbe` for crash detection (starts after startup succeeds)
+- Sets up `readinessProbe` to control traffic routing (starts after startup succeeds)
+- All probes check `/health` endpoint
+- No need to calculate `failureThreshold` or other probe parameters
+
+### Advanced: Manual Probe Configuration
+
+If you need fine-grained control, disable `slowStart` and configure probes manually:
+
+```yaml
+slowStart:
+  enabled: false
+
 startupProbe:
   enabled: true
-  failureThreshold: 120  # 20 minutes total
+  failureThreshold: 120  # Custom calculation
   periodSeconds: 10
-  initialDelaySeconds: 10
+
+livenessProbe:
+  enabled: true
+  periodSeconds: 30
+
+readinessProbe:
+  enabled: true
+  periodSeconds: 10
 ```
 
 ### ⚠️ Don't Disable Probes (Anti-Pattern)
