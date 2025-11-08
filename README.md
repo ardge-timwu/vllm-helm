@@ -370,6 +370,8 @@ helm install my-vllm ardge-timwu/vllm-helm \
 - All probes check `/health` endpoint
 - No need to calculate `failureThreshold` or other probe parameters
 
+**Note**: `slowStart` is **enabled by default** with `maxStartupSeconds: 600` (10 minutes). To disable all probes (e.g., for operator-managed pods), see [Disabling All Probes](#disabling-all-probes-operator-managed-pods).
+
 ### Advanced: Manual Probe Configuration
 
 If you need fine-grained control, disable `slowStart` and configure probes manually:
