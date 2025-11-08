@@ -122,25 +122,42 @@ persistence:
   size: 50Gi
   annotations: {}
 
-# Liveness and readiness probe configuration
-# Important: Model downloads and CUDA graph compilation can take several minutes
-# Adjust initialDelaySeconds based on your model size and network speed
+# Health probe configuration
+# For long model downloads, use startupProbe instead of disabling liveness/readiness probes
+# startupProbe gives extra time for initial startup, then liveness/readiness take over
+
+# Startup probe - protects slow-starting containers (Kubernetes 1.16+)
+# Delays liveness/readiness checks until container is ready
+# Recommended: Enable this for large models instead of disabling liveness probe
+startupProbe:
+  enabled: true
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 10  # Start checking after 10 seconds
+  periodSeconds: 10        # Check every 10 seconds
+  timeoutSeconds: 5
+  failureThreshold: 60     # Allow up to 60 failures = 10 minutes total startup time
+  # Total max startup time = initialDelaySeconds + (periodSeconds * failureThreshold) = 610 seconds
+
+# Liveness probe - restarts container if it becomes unhealthy
+# Only starts checking after startupProbe succeeds
 livenessProbe:
   enabled: true
   httpGet:
     path: /health
     port: http
-  initialDelaySeconds: 300  # 5 minutes - allows time for model download and compilation
   periodSeconds: 30
   timeoutSeconds: 10
   failureThreshold: 3
 
+# Readiness probe - controls when pod receives traffic
+# Only starts checking after startupProbe succeeds
 readinessProbe:
   enabled: true
   httpGet:
     path: /health
     port: http
-  initialDelaySeconds: 60  # 1 minute - wait for basic initialization
   periodSeconds: 10
   timeoutSeconds: 5
   failureThreshold: 3

@@ -307,9 +307,9 @@ The following table lists the configurable parameters of the vLLM chart and thei
 | `persistence.existingClaim` | Use existing PVC instead of creating new one | `""` (create new) |
 | `persistence.size` | Storage size (when creating new PVC) | `50Gi` |
 | `persistence.storageClass` | Storage class name (when creating new PVC) | `""` |
-| `livenessProbe.initialDelaySeconds` | Liveness probe initial delay | `300` (5 minutes) |
+| `startupProbe.enabled` | Enable startup probe (recommended) | `true` |
+| `startupProbe.failureThreshold` | Startup failures before restart | `60` (10 min) |
 | `livenessProbe.enabled` | Enable liveness probe | `true` |
-| `readinessProbe.initialDelaySeconds` | Readiness probe initial delay | `60` (1 minute) |
 | `readinessProbe.enabled` | Enable readiness probe | `true` |
 | `init_drop_cache` | Enable drop-cache init container (requires privileged pod) | `false` |
 
@@ -322,44 +322,82 @@ When vLLM starts, it needs to:
 2. Load the model into GPU memory
 3. Compile CUDA graphs for optimized inference
 
-This process can take several minutes, especially for large models. The default configuration allows 5 minutes for the liveness probe and 1 minute for the readiness probe.
+This process can take several minutes, especially for large models.
 
-### Adjusting Probe Timings
+### Startup Probe (Recommended Approach)
 
-For large models (>10GB) or slow network connections, you may need to increase the probe delays:
+**By default, this chart uses a `startupProbe`** which is the Kubernetes best practice for slow-starting containers. This provides:
+
+- **Extended startup time**: Allows up to 10 minutes (configurable) for model loading
+- **Responsive health checks**: Once started, liveness/readiness probes respond quickly
+- **No need to disable probes**: Keep health monitoring active in production
+
+**How it works:**
+- Startup probe checks `/health` every 10 seconds, allowing up to 60 failures (10 minutes total)
+- Liveness and readiness probes don't start until startup probe succeeds
+- After startup succeeds, liveness/readiness provide fast failure detection
+
+**For very large models (>20GB), increase the startup time:**
 
 ```bash
 helm install my-vllm ardge-timwu/vllm-helm \
-  --set livenessProbe.initialDelaySeconds=600 \
-  --set readinessProbe.initialDelaySeconds=120
+  --set startupProbe.failureThreshold=120  # 20 minutes (120 * 10 seconds)
 ```
 
-Or in your values.yaml:
+Or in values.yaml:
+
+```yaml
+startupProbe:
+  enabled: true
+  failureThreshold: 120  # 20 minutes total
+  periodSeconds: 10
+  initialDelaySeconds: 10
+```
+
+### ⚠️ Don't Disable Probes (Anti-Pattern)
+
+**Bad practice** (found in some deployments):
+```yaml
+# DON'T DO THIS - disables health monitoring entirely
+livenessProbe:
+  enabled: false
+readinessProbe:
+  enabled: false
+```
+
+**Why this is bad:**
+- No health monitoring in production
+- Container won't be restarted if vLLM crashes
+- Service continues routing traffic to failed pods
+- Can't detect when pod is ready to serve traffic
+
+**Instead, use startupProbe** as shown above, or increase `failureThreshold`:
+
+```yaml
+# BETTER - keeps monitoring, extends startup time
+startupProbe:
+  enabled: true
+  failureThreshold: 180  # 30 minutes for extremely large models
+```
+
+### Legacy Approach (Without Startup Probe)
+
+If you can't use startup probes (Kubernetes < 1.16), increase `initialDelaySeconds`:
 
 ```yaml
 livenessProbe:
   enabled: true
-  initialDelaySeconds: 600  # 10 minutes for very large models
-  periodSeconds: 30
-  timeoutSeconds: 10
-  failureThreshold: 3
-
+  initialDelaySeconds: 600  # 10 minutes
 readinessProbe:
   enabled: true
-  initialDelaySeconds: 120  # 2 minutes
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 3
+  initialDelaySeconds: 600
 ```
 
-### Disabling Probes During Development
-
-For development or debugging, you can disable the probes entirely:
+To disable startup probe and use legacy timing:
 
 ```bash
 helm install my-vllm ardge-timwu/vllm-helm \
-  --set livenessProbe.enabled=false \
-  --set readinessProbe.enabled=false
+  --set startupProbe.enabled=false
 ```
 
 ## Resource Management
