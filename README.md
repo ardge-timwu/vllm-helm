@@ -438,6 +438,43 @@ helm install my-vllm ardge-timwu/vllm-helm \
   --set startupProbe.enabled=false
 ```
 
+### Disabling All Probes (Operator-Managed Pods)
+
+For environments where pod health is managed by Kubernetes operators or external monitoring systems, you can disable all built-in health probes:
+
+```yaml
+# Disable all Kubernetes health probes
+slowStart:
+  enabled: false
+
+startupProbe:
+  enabled: false
+
+livenessProbe:
+  enabled: false
+
+readinessProbe:
+  enabled: false
+```
+
+Or via command line:
+
+```bash
+helm install my-vllm ardge-timwu/vllm-helm \
+  --set slowStart.enabled=false \
+  --set startupProbe.enabled=false \
+  --set livenessProbe.enabled=false \
+  --set readinessProbe.enabled=false
+```
+
+**Use cases for disabling probes:**
+- Custom operators managing pod lifecycle (e.g., KubeRay, vLLM operators)
+- External health monitoring systems (Prometheus with custom alerts)
+- Custom controllers watching vLLM-specific metrics
+- Development/testing environments with manual control
+
+**⚠️ Warning**: Only disable probes if you have alternative health monitoring in place. Without any health checks, failed pods won't be automatically restarted and traffic won't be properly routed.
+
 ## Resource Management
 
 ### Memory Requirements
