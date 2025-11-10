@@ -82,6 +82,7 @@ spec:
             - "-c"
             - |
               sync; echo 3 > /proc/sys/vm/drop_caches || true
+              pip install bitsandbytes
               exec vllm serve {{ .Values.vllm.model | quote }} \
                 --host {{ .Values.vllm.host | quote }} \
                 --port {{ .Values.vllm.port | quote }} \
@@ -97,26 +98,23 @@ spec:
                 $@
           {{- else }}
           command:
-            - "vllm"
-            - "serve"
-          args:
-            - {{ .Values.vllm.model | quote }}
-            - "--host"
-            - {{ .Values.vllm.host | quote }}
-            - "--port"
-            - {{ .Values.vllm.port | quote }}
-            - "--gpu-memory-utilization"
-            - {{ .Values.vllm.gpuMemoryUtilization | quote }}
-            - "--max-model-len"
-            - {{ .Values.vllm.maxModelLen | quote }}
-            - "--tensor-parallel-size"
-            - {{ .Values.vllm.tensorParallelSize | quote }}
-            {{- if .Values.vllm.trustRemoteCode }}
-            - "--trust-remote-code"
-            {{- end }}
-            {{- range .Values.vllm.additionalArgs }}
-            - {{ . | quote }}
-            {{- end }}
+            - "sh"
+            - "-c"
+            - |
+              pip install bitsandbytes
+              exec vllm serve {{ .Values.vllm.model | quote }} \
+                --host {{ .Values.vllm.host | quote }} \
+                --port {{ .Values.vllm.port | quote }} \
+                --gpu-memory-utilization {{ .Values.vllm.gpuMemoryUtilization | quote }} \
+                --max-model-len {{ .Values.vllm.maxModelLen | quote }} \
+                --tensor-parallel-size {{ .Values.vllm.tensorParallelSize | quote }} \
+                {{- if .Values.vllm.trustRemoteCode }}
+                --trust-remote-code \
+                {{- end }}
+                {{- range .Values.vllm.additionalArgs }}
+                {{ . | quote }} \
+                {{- end }}
+                $@
           {{- end }}
           {{- if .Values.slowStart.enabled }}
           {{- $startupPeriod := 15 }}
